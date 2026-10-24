@@ -6,13 +6,39 @@ import request from 'supertest';
 process.env.JWT_SECRET = 'taskmatrix-test-secret';
 process.env.AI_RATE_LIMIT_MAX = '5';
 process.env.LOGIN_RATE_LIMIT_MAX = '5';
+process.env.CLIENT_URL = 'https://taskmatrix-web.example.test';
 delete process.env.MONGODB_URI;
 delete process.env.OPENAI_API_KEY;
 
 const { default: app } = await import('../src/app.js');
 const { memoryTasks, memoryUsers } = await import('../src/utils/memoryStore.js');
 const { getJwtSecret } = await import('../src/utils/jwt.js');
+const { isDevelopmentOrigin, resolveAllowedOrigins } = await import('../src/config/cors.js');
 process.env.MONGODB_URI = '';
+
+test('CORS accepts configured origins, handles preflight, and rejects unlisted origins', async () => {
+  const allowedOrigin = 'https://taskmatrix-web.example.test';
+  const response = await request(app).get('/api/health').set('Origin', allowedOrigin);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers['access-control-allow-origin'], allowedOrigin);
+
+  const preflight = await request(app)
+    .options('/api/tasks')
+    .set('Origin', allowedOrigin)
+    .set('Access-Control-Request-Method', 'POST')
+    .set('Access-Control-Request-Headers', 'authorization,content-type');
+  assert.equal(preflight.status, 204);
+  assert.equal(preflight.headers['access-control-allow-origin'], allowedOrigin);
+  assert.equal(preflight.headers['access-control-allow-credentials'], undefined);
+
+  const rejected = await request(app).get('/api/health').set('Origin', 'https://untrusted.example.test');
+  assert.equal(rejected.status, 403);
+  assert.equal(rejected.headers['access-control-allow-origin'], undefined);
+
+  assert.throws(() => resolveAllowedOrigins('http://localhost:5173', true), /HTTPS and a public hostname/);
+  assert.throws(() => resolveAllowedOrigins('*', true), /exact origins/);
+  assert.equal(isDevelopmentOrigin('http://localhost:54321'), true);
+});
 
 test('JWT secret rejects the development fallback in production', () => {
   const previousEnvironment = process.env.NODE_ENV;

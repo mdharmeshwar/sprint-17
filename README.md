@@ -124,8 +124,21 @@ The API starts with `npm --prefix server run start`; the static publish director
 
 The host names currently written in `render.yaml` are configuration values, not confirmation of a live deployment. Verify the deployed health route, CORS, authentication, MongoDB CRUD, rate limits, and a real AI suggestion after deployment. Do not record or publish secrets.
 
+Production CORS allows only exact HTTPS origins listed in the backend `CLIENT_URL`; localhost origins are accepted only outside production. The Vite production build requires `VITE_API_URL` to be an HTTPS URL ending in `/api` and rejects localhost. Set it in the static site's build environment and rebuild/redeploy after changing it. A local ignored `client/src/.env` may override shell environment values during local production builds; set `VITE_API_URL` explicitly for the build or remove the local override when testing production configuration. See the Sprint 17 deployment report for the latest verified status and remaining account-level steps.
+
+### Sprint 17 go-live status
+
+The source is prepared for Render, but a live deployment has not been verified. During the last check, the Render hostnames configured in `render.yaml` returned HTTP 404 for both the API health endpoint and frontend. Do not treat those configured hostnames as confirmed live URLs.
+
+Before deploying, confirm the Render service is connected to the intended GitHub repository and `main` branch. Configure `MONGODB_URI`, `JWT_SECRET`, and the exact deployed frontend origin in `CLIENT_URL` on the API service. Configure `VITE_API_URL` as the actual HTTPS API URL ending in `/api` on the static site's build environment. Set `OPENAI_API_KEY` only on the backend if live AI suggestions are enabled. Production startup requires `MONGODB_URI` and `JWT_SECRET`.
+
+The API CORS allowlist accepts exact HTTPS public origins in production; localhost is development-only. Verify health, preflight, login, task persistence, and AI behavior after deployment. Atlas network access and persistence have not been verified. Prefer stable host egress IPs or private networking; use `0.0.0.0/0` only if required by the assignment, with restricted database credentials, and remove the broad rule when possible. See [Sprint 17 deployment report](docs/Sprint-17-Deployment.md) for verification results and the complete checklist.
+
+The last local checks passed: backend tests and build, and frontend production build with an explicit HTTPS API URL. Backend production dependency audit reported zero vulnerabilities; frontend audit still reports two moderate React Router advisories whose automated fix is a major-version upgrade.
+
 ## Project notes
 
+- [Sprint 17 deployment and go-live report](docs/Sprint-17-Deployment.md)
 - [Sprint 16 submission and QA notes](docs/Sprint-16-Submission.md)
 - [AI-assisted work log](Prompts.md)
 - [Sprint plan](docs/Sprint-Plan.md)

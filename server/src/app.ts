@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import { isDevelopmentOrigin, resolveAllowedOrigins } from './config/cors.js';
 
 import authRoutes from './routes/authRoutes.js';
 import taskRoutes from './routes/taskRoutes.js';
@@ -14,17 +15,14 @@ if (Number.isInteger(trustedProxyHops) && trustedProxyHops > 0) {
   app.set('trust proxy', trustedProxyHops);
 }
 
-const configuredOrigins = (process.env.CLIENT_URL || 'http://localhost:5173,http://localhost:5174')
-  .split(',')
-  .map((value) => value.trim())
-  .filter(Boolean);
+const production = process.env.NODE_ENV === 'production';
+const configuredOrigins = resolveAllowedOrigins(process.env.CLIENT_URL, production);
 
 const isAllowedOrigin = (origin: string | undefined) => {
   if (!origin) return true;
 
-  if (configuredOrigins.includes(origin)) return true;
-
-  return /^http:\/\/localhost:\d+$/.test(origin);
+  if (configuredOrigins.has(origin)) return true;
+  return !production && isDevelopmentOrigin(origin);
 };
 
 app.use(
@@ -35,9 +33,9 @@ app.use(
         return;
       }
 
-      callback(new Error(`CORS origin not allowed: ${origin ?? 'unknown'}`));
+      callback(Object.assign(new Error('Origin is not allowed by CORS.'), { status: 403 }));
     },
-    credentials: true,
+    credentials: false,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })

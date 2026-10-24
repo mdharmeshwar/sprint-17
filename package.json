@@ -1,6 +1,9 @@
 {
   "name": "taskmatrix",
   "private": true,
+  "engines": {
+    "node": ">=22 <25"
+  },
   "workspaces": [
     "server",
     "client/src"

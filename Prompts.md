@@ -56,3 +56,45 @@ Harden the existing Task Matrix application without replacing its architecture o
 - The frontend does not currently define a separate test or lint script.
 - Repository/live application/backend API URLs and QA recording URL were not provided; Render hostnames in configuration are not evidence of a successful deployment.
 - The implementation remains uncommitted. This log records only work performed in this repository session and does not claim earlier prompts or actions.
+
+## Task Matrix | Sprint 17 Deployment and Go-Live Log
+
+### Objective
+
+Prepare the existing application for production compilation and deployment while preserving its UI, routes, authentication, CRUD behavior, and data architecture. Verify every local check available and mark cloud-only work as blocked until it can be confirmed.
+
+### User instructions represented
+
+- Audit the current monorepo, runtime, build/start commands, environment variables, Git state, API URL configuration, CORS, and hosting setup before editing.
+- Preserve existing behavior and avoid exposing or committing credentials.
+- Harden production CORS and frontend API configuration, run tests/builds/audits, and report actual live deployment status rather than assuming success.
+- Document the final setup and any account-level deployment steps.
+
+### Work performed with AI assistance
+
+- Confirmed the application is a React 18/Vite frontend and Express 4/TypeScript API monorepo, with Mongoose/MongoDB, JWT bearer authentication, and an existing Render blueprint.
+- Added exact-origin production CORS validation, HTTPS/public-host restrictions, development-only loopback handling, and local preflight/rejection tests. Disabled credentialed CORS because the app uses bearer authorization headers rather than cookies.
+- Added production Vite validation for `VITE_API_URL`, requiring a valid HTTPS API URL ending in `/api` and rejecting localhost or credentials.
+- Pinned Node 24.22.1 in `.node-version` and declared the supported root Node engine range, matching the installed OpenAI SDK requirement.
+- Applied the compatible backend dependency audit fix for the vulnerable transitive `body-parser` version.
+- Updated the README and added `docs/Sprint-17-Deployment.md` with environment setup, deployment procedure, Atlas network-access guidance, and a PASS/FAIL/BLOCKED checklist.
+
+### Verification performed
+
+- `npm --prefix server test`: passed, three test cases, including API integration, CORS/preflight behavior, and production JWT configuration guard.
+- `npm --prefix server run build`: passed.
+- `npm --prefix client/src run build` with `VITE_API_URL=https://taskmatrix-api.onrender.com/api`: passed.
+- Production frontend build with missing `VITE_API_URL`: failed intentionally with the expected configuration guard.
+- `npm --prefix server audit --omit=dev`: zero vulnerabilities after the compatible fix.
+- `npm --prefix client/src audit --omit=dev`: two moderate React Router advisories remain; npm's proposed automatic fix upgrades to major version 7 and was not applied.
+- Workspace diagnostics: no errors in the checked source files.
+- Live checks to the hostnames currently in `render.yaml` returned HTTP 404 for both frontend and API health URL.
+
+### Decisions and unresolved work
+
+- Kept the existing Render topology and production startup command. No duplicate service or backend entry point was added.
+- Did not make Atlas network-access changes. Prefer stable outbound IP allowlisting/private networking; `0.0.0.0/0` is broad and should only be used if required, with strong limited database credentials and later restriction.
+- Local ignored `client/src/.env` and `server/.env` are not tracked. The frontend local env points to localhost and can override shell values during Vite builds, so production builds must explicitly supply the real `VITE_API_URL`.
+- No Render account, Atlas dashboard, actual live host URL, authorized test account, or QA video was available. Cloud startup, MongoDB persistence, live CORS, auth, CRUD, and AI remain unverified.
+- A prior workspace scan exposed a credential in ignored local `server/.env`; rotate that database credential before using it in production. Its value is deliberately omitted.
+- Sprint 17 changes are uncommitted and unpublished. This log records work performed in this session only and is not a verbatim transcript.
